@@ -1,14 +1,16 @@
 const trackingInput = document.querySelector("#tracking-number");
 const clearButton = document.querySelector("#clear-button");
-const japanPostLink = document.querySelector("#japan-post-link");
 const deutschePostLink = document.querySelector("#deutsche-post-link");
+const japanPostLink = document.querySelector("#japan-post-link");
 const feedback = document.querySelector("#tracking-feedback");
 
-const JAPAN_POST_BASE =
-  "https://trackings.post.japanpost.jp/services/srv/search/direct?locale=ja&reqCodeNo1=";
 const DEUTSCHE_POST_URL =
   "https://www.deutschepost.de/de/s/sendungsverfolgung.html";
 const DEUTSCHE_POST_BASE = `${DEUTSCHE_POST_URL}?piececode=`;
+const JAPAN_POST_URL =
+  "https://trackings.post.japanpost.jp/services/srv/search/input?locale=ja";
+const JAPAN_POST_BASE =
+  "https://trackings.post.japanpost.jp/services/srv/search/direct?locale=ja&reqCodeNo1=";
 
 function normalizeTrackingNumber(value) {
   return value.toUpperCase().replace(/[\s-]+/g, "").replace(/[^A-Z0-9]/g, "");
@@ -16,12 +18,6 @@ function normalizeTrackingNumber(value) {
 
 function isUsableTrackingNumber(value) {
   return value.length >= 8 && value.length <= 32;
-}
-
-function setFeedback(message, isError = false) {
-  feedback.textContent = message;
-  feedback.classList.toggle("is-error", isError);
-  trackingInput.classList.toggle("has-error", isError);
 }
 
 function setLinkState(link, enabled) {
@@ -37,45 +33,37 @@ function updateTrackingLinks() {
     trackingInput.value = value;
   }
 
-  japanPostLink.href = enabled
-    ? `${JAPAN_POST_BASE}${encodeURIComponent(value)}`
-    : "https://trackings.post.japanpost.jp/services/srv/search/input?locale=ja";
   deutschePostLink.href = enabled
     ? `${DEUTSCHE_POST_BASE}${encodeURIComponent(value)}`
     : DEUTSCHE_POST_URL;
-  setLinkState(japanPostLink, enabled);
-  setLinkState(deutschePostLink, enabled);
+  japanPostLink.href = enabled
+    ? `${JAPAN_POST_BASE}${encodeURIComponent(value)}`
+    : JAPAN_POST_URL;
 
-  if (value.length === 0) {
-    setFeedback("");
-  } else if (!enabled) {
-    setFeedback("追跡番号を最後まで入力してください。", true);
-  } else {
-    setFeedback("追跡する郵便会社を選んでください。");
-  }
+  setLinkState(deutschePostLink, enabled);
+  setLinkState(japanPostLink, enabled);
+
+  feedback.classList.toggle("is-error", value.length > 0 && !enabled);
+  feedback.textContent =
+    value.length > 0 && !enabled ? "追跡番号を最後まで入力してください。" : "";
+  clearButton.classList.toggle("is-hidden", value.length === 0);
 }
 
 function blockDisabledLink(event) {
   if (event.currentTarget.classList.contains("is-disabled")) {
     event.preventDefault();
     trackingInput.focus();
-    setFeedback("先に追跡番号を入力してください。", true);
   }
 }
 
 trackingInput.addEventListener("input", updateTrackingLinks);
-trackingInput.addEventListener("blur", () => {
-  trackingInput.value = normalizeTrackingNumber(trackingInput.value);
-  updateTrackingLinks();
-});
-
+trackingInput.addEventListener("blur", updateTrackingLinks);
 clearButton.addEventListener("click", () => {
   trackingInput.value = "";
   updateTrackingLinks();
   trackingInput.focus();
 });
-
-japanPostLink.addEventListener("click", blockDisabledLink);
 deutschePostLink.addEventListener("click", blockDisabledLink);
+japanPostLink.addEventListener("click", blockDisabledLink);
 
 updateTrackingLinks();
